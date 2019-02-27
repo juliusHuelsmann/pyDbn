@@ -150,7 +150,7 @@ class DBN:
             else:
                 exportFile="out.pdf"
         else:
-            assert(exportFile.endswith(".pdf"))
+            assert(exportFile.endswith(".pdf") or exportFile.endswith(".jpg") or exportFile.endswith(".svg"))
 
         # compute the adequate size for the figure and initialize it.
         amountSlices = sliceBefore + sliceAfter + 1
