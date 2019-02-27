@@ -42,3 +42,7 @@ These 7 lines of code create the following two vector graphics:
 and 
 ![hmm](https://user-images.githubusercontent.com/9212314/53511005-9ab18300-3abf-11e9-913d-54b7c297bf4f.jpg)
 [hmm.pdf](https://github.com/juliusHuelsmann/pyDbn/files/2911552/hmm.pdf)
+
+
+#### Output - format: 
+Supports `pdf` `svg` `jpg` and a lot more.
