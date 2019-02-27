@@ -4,12 +4,20 @@ Wrapper around daft for easily creating DBN.
 
 
 ### Install
+
+#### Alternative A) Install systemwide
+```python
+python setup.py build
+sudo python setup.py install
+```
+
+#### Alternative B) Install dependencies + include
 ```bash
 pip install daft --user
 ```
 
 
-### Usage
+### 1. Usage
 see examples
 
 #### Example: Creating a Model
@@ -46,3 +54,4 @@ and
 
 #### Output - format: 
 Supports `pdf` `svg` `jpg` and a lot more.
+

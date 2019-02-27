@@ -6,7 +6,8 @@ from enum import Enum
 
 import __main__
 import os
-
+__all__ = ["NodeType", "NodeProperties", "DBN"]
+__version__ = "0.0.1"
 
 
 class NodeType(Enum):

@@ -1,7 +1,7 @@
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__ + "/..")))
 
-from dbnHelper import *
+from pyDbn import *
 
 k = DBN(exportDir="../build/figures")
 k.attach(NodeProperties(name="X",x=0, y=1,parentsPrevious="X"))
