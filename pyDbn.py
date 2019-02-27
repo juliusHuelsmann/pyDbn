@@ -29,20 +29,23 @@ class NodeProperties:
     Simple class that holds the properties of a node. see :__init__:.
     """
 
-    def __init__(self, name, x, y, nodeType=NodeType.Hidden, continuous=False, parentsPrevious=[], parentsNow=[],
-                 plotParams={}, labelParams=None):
+    def __init__(self, name, x, y, nodeType=NodeType.Hidden, continuous=False, parentsPrevious=[], 
+                 parentsNow=[], plotParams={}, labelParams=None):
         """
 
         :param name:            the name that is going to be displayed inside the node.
-                                Internally, this name is also used inside a lookup table, hence this name is required
+                                Internally, this name is also used inside a lookup table, 
+                                hence this name is required
                                 to be unique.
 
-        :param x:               the position (in node count, horizontally in the time slice), positive real number
-        :param y:               the position (in node count + vertically in the time slice), positive real number
+        :param x:               the position (in node count, horizontally in the time slice), 
+                                positive real number
+        :param y:               the position (in node count + vertically in the time slice), 
+                                positive real number
 
         :param nodeType:
-        :param continuous:      whether the random variable is discrete or continuous. Depending on this property,
-                                the way the node is displayed changes.
+        :param continuous:      whether the random variable is discrete or continuous. 
+                                Depending on this property, the way the node is displayed changes.
 
         :param parentsPrevious: List of parent identifiers to be linked from the previous slice
         :param parentsNow:      List of parent identifiers from the current slice.
@@ -82,6 +85,7 @@ class DBN:
         """
         Sets up the default configuration (font faamily, border, etc.)
         """
+        self.verbose = verbose
         if (len(exportDir)):
 
             # Make sure that the export directory ends with "/" if it exists.
@@ -95,10 +99,11 @@ class DBN:
 
             # create directory
             if not os.path.isdir(exportDir):
-                if verbose: print("[INFO]    Directory '" + exportDir + "' did not exist. creating :)")
+                if self.verbose: 
+                    print("[INFO]    Directory '" + exportDir + "' did not exist. creating :)")
                 os.makedirs(exportDir)
             else:
-                if verbose: print("[INFO]    Directory '" + exportDir + "' already exists!")
+                if self.verbose: print("[INFO]    Directory '" + exportDir + "' already exists!")
 
 
 
@@ -128,11 +133,12 @@ class DBN:
         To be called after all nodes have been added to the DBN.
 
         :param exportFile:          file name (+path) of the output pdf.
-        :param sliceBefore:         the amount of slices to be displayed before the 'current' time slice
+        :param sliceBefore:         the amount of slices to be displayed before the 'current' time 
+                                    slice
         :param sliceAfter:          " after the current time slice
         :param nodeSpace:           factor that determines the space between different nodes.
-        :param centerSuffix:        the name that is written into the footer of each variable (with offset for
-                                    different time slices).
+        :param centerSuffix:        the name that is written into the footer of each variable (with
+                                    offset for different time slices).
 
         Example usage:
         dbn.export(0,, 5, 1, "") will create the time slices 0, \dots, 5)
@@ -151,7 +157,21 @@ class DBN:
             else:
                 exportFile="out.pdf"
         else:
-            assert(exportFile.endswith(".pdf") or exportFile.endswith(".jpg") or exportFile.endswith(".svg"))
+            assert(exportFile.endswith(".pdf")  \
+                    or exportFile.endswith(".jpg")  \
+                    or exportFile.endswith(".svg"))
+
+        # Create directory
+        pos = exportFile.rfind('/')
+        if pos > 0:
+            exportFile[:pos]
+            ed = self.exportDir + exportFile[:pos]
+            if not os.path.isdir(ed):
+                if self.verbose: 
+                    print("[INFO]    Subdirectory '" + ed + "' did not exist. creating :)")
+                os.makedirs(ed)
+            elif self.verbose: print("[INFO]    Subdirectory '" + ed + "' already exists!")
+
 
         # compute the adequate size for the figure and initialize it.
         amountSlices = sliceBefore + sliceAfter + 1
@@ -196,8 +216,12 @@ class DBN:
                     plotParams["linewidth"] = .5
 
                 # In case the node is a variable node, only print the variable once:
-                #   In case the variable contains information shared across slices, only print it in snum == 0
-                #   In case the variable contains only information on the first slice, print if sid == 0
+                #
+                #   In case the variable contains information shared across slices, only print 
+                #   it in snum == 0
+                #
+                #   In case the variable contains only information on the first slice, 
+                #   print if sid == 0
                 paintNode = node.nodeType != NodeType.Variable
                 if not paintNode:
                     isOnlyFirst  = len(node.parentsPrevious)
@@ -226,8 +250,10 @@ class DBN:
                     if node.nodeType == NodeType.Variable:
                         if snum == sliceAfter:
                             for sid, sn2 in enumerate(range(-sliceBefore, sliceAfter+1)):
-                                #self.pgm.add_edge(p + str(sid), node.name + str(sliceBefore), linestyle='-')
-                                self.pgm.add_edge(node.name + str(sliceBefore), p + str(sid), linestyle='-')
+                                #self.pgm.add_edge(p + str(sid), node.name + str(sliceBefore), 
+                                #                  linestyle='-')
+                                self.pgm.add_edge(node.name + str(sliceBefore), p + str(sid), 
+                                                  linestyle='-')
                     else:
                         self.pgm.add_edge(p + str(sid), cname)
 
@@ -241,14 +267,13 @@ class DBN:
                         for p in node.parentsPrevious:
                             self.pgm.add_edge(p + '0', cname, linestyle="-")
                             self.pgm.add_edge(cname, p + '0', linestyle="-")
-                            #self.pgm.add_edge(p + '0', cname, head_width=0, linestyle=":", color="white")
                 elif sid:
                     for p in node.parentsPrevious:
                         self.pgm.add_edge(p + str(sid-1), cname)
 
 
 
-    # render and export.
+        # render and export.
         self.pgm.render()
         self.pgm.figure.savefig(self.exportDir + exportFile)
 
