@@ -226,7 +226,8 @@ class DBN:
                     if node.nodeType == NodeType.Variable:
                         if snum == sliceAfter:
                             for sid, sn2 in enumerate(range(-sliceBefore, sliceAfter+1)):
-                                self.pgm.add_edge(p + str(sid), node.name + str(sliceBefore), linestyle='-')
+                                #self.pgm.add_edge(p + str(sid), node.name + str(sliceBefore), linestyle='-')
+                                self.pgm.add_edge(node.name + str(sliceBefore), p + str(sid), linestyle='-')
                     else:
                         self.pgm.add_edge(p + str(sid), cname)
 
@@ -239,6 +240,7 @@ class DBN:
                     if centerSuffix=="" and sid==0:
                         for p in node.parentsPrevious:
                             self.pgm.add_edge(p + '0', cname, linestyle="-")
+                            self.pgm.add_edge(cname, p + '0', linestyle="-")
                             #self.pgm.add_edge(p + '0', cname, head_width=0, linestyle=":", color="white")
                 elif sid:
                     for p in node.parentsPrevious:
