@@ -37,6 +37,8 @@ k.export(sliceBefore=2, sliceAfter=1, centerSuffix="\\tau") #< variant 2: export
 
 These 7 lines of code create the following two vector graphics:
 
+![hmm1](https://user-images.githubusercontent.com/9212314/53511004-9ab18300-3abf-11e9-862c-bbf7ae55cebc.jpg) 
 [hmm1.pdf](https://github.com/juliusHuelsmann/pyDbn/files/2911551/hmm1.pdf)
+and 
+![hmm](https://user-images.githubusercontent.com/9212314/53511005-9ab18300-3abf-11e9-913d-54b7c297bf4f.jpg)
 [hmm.pdf](https://github.com/juliusHuelsmann/pyDbn/files/2911552/hmm.pdf)
-
