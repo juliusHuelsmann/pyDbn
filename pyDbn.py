@@ -82,7 +82,6 @@ class NodeProperties:
         assert(isOnlyFirst == 0 or isEverySlice == 0)
         
         if isOnlyFirst: 
-            print(self.name, isOnlyFirst, displayFirst)
             if displayFirst:
                 return sliceIndex == 0 #< only in the first slice
             return False #< never
@@ -258,7 +257,6 @@ class DBN:
                 if not paintNode:
                     paintNode = node.isDisplayedInSlice(sid, sliceBefore, sliceAfter, not len(centerSuffix))
                     cname = node.name
-                print(name, paintNode)
 
 
                 if paintNode:
@@ -289,7 +287,6 @@ class DBN:
                             for sid, sn2 in enumerate(range(-sliceBefore, sliceAfter+1)):
                                 #self.pgm.add_edge(p + str(sid), node.name + str(sliceBefore), 
                                 #                  linestyle='-')
-                                print(node.name, p + str(sid))
                                 self.pgm.add_edge(node.name, p + str(sid), linestyle='-')
                     else:
                         self.pgm.add_edge(p + str(sid), cname)
