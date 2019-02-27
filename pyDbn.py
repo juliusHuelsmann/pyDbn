@@ -1,5 +1,6 @@
 from matplotlib import rc
 import daft
+import math
 
 from enum import Enum
 
@@ -65,6 +66,30 @@ class NodeProperties:
 
         self.plotParams = plotParams
         self.labelParams = labelParams
+    
+    def isDisplayedInSlice(self, sliceIndex, sliceBefore, sliceAfter, displayFirst):
+        """
+        Utility function for checking if a node is displayed in the current slice (identified by
+        index (not by identifier; index counts from 0 until sliceAfter - sliceBefore + 1)
+
+
+        :param:     displayFirst <=> whether the first slice is displayed as first element.
+        """
+        if (self.nodeType != NodeType.Variable): return True
+
+        isOnlyFirst  = len(self.parentsPrevious)
+        isEverySlice = len(self.parentsNow)
+        assert(isOnlyFirst == 0 or isEverySlice == 0)
+        
+        if isOnlyFirst: 
+            print(self.name, isOnlyFirst, displayFirst)
+            if displayFirst:
+                return sliceIndex == 0 #< only in the first slice
+            return False #< never
+        if displayFirst:
+            return sliceIndex == math.floor((-sliceBefore + sliceAfter + 1) / 2)
+        return sliceIndex == sliceBefore #< at t= 0; hence with offset #sliceBefore
+        
 
 
 class DBN:
@@ -152,8 +177,15 @@ class DBN:
         # determine the name of the export file if non is specified.
         if not len(exportFile):
             name = __main__.__file__
+
+            # if launcehd e.g. from vim, the name is the absolute path of the file
+            # and hence only the name can be extracted.
+            if name[0] == '/':
+                pos = name.rfind('/')
+                if pos >= 0: name = name[pos:]
+
             if (name and len(name) > 3):
-                exportFile = __main__.__file__[:-3] + ".pdf"
+                exportFile = name[:-3] + ".pdf"
             else:
                 exportFile="out.pdf"
         else:
@@ -224,10 +256,10 @@ class DBN:
                 #   print if sid == 0
                 paintNode = node.nodeType != NodeType.Variable
                 if not paintNode:
-                    isOnlyFirst  = len(node.parentsPrevious)
-                    isEverySlice = len(node.parentsNow)
-                    assert(isOnlyFirst == 0  or isEverySlice == 0)
-                    paintNode = sid == 0 and not len(centerSuffix) if isOnlyFirst else snum == 0
+                    paintNode = node.isDisplayedInSlice(sid, sliceBefore, sliceAfter, not len(centerSuffix))
+                    cname = node.name
+                print(name, paintNode)
+
 
                 if paintNode:
                     x = sid * (self.maxx+1) * nodeSpace + (node.x+.5) * nodeSpace
@@ -243,6 +275,11 @@ class DBN:
                             label_params = node.labelParams
                         )
                     )
+
+        for sid, snum in enumerate(range(-sliceBefore, sliceAfter+1)):
+            for name in self.slice:
+                node = self.slice[name]
+                cname = node.name + str(sid)
                 # add parents of the current time slice
                 for p in node.parentsNow:
 
@@ -252,8 +289,8 @@ class DBN:
                             for sid, sn2 in enumerate(range(-sliceBefore, sliceAfter+1)):
                                 #self.pgm.add_edge(p + str(sid), node.name + str(sliceBefore), 
                                 #                  linestyle='-')
-                                self.pgm.add_edge(node.name + str(sliceBefore), p + str(sid), 
-                                                  linestyle='-')
+                                print(node.name, p + str(sid))
+                                self.pgm.add_edge(node.name, p + str(sid), linestyle='-')
                     else:
                         self.pgm.add_edge(p + str(sid), cname)
 
@@ -265,8 +302,8 @@ class DBN:
                     # of the 0th slice if displayed.
                     if centerSuffix=="" and sid==0:
                         for p in node.parentsPrevious:
-                            self.pgm.add_edge(p + '0', cname, linestyle="-")
-                            self.pgm.add_edge(cname, p + '0', linestyle="-")
+                            #self.pgm.add_edge(p + '0', node.name, linestyle="-")
+                            self.pgm.add_edge(node.name, p + '0', linestyle="-")
                 elif sid:
                     for p in node.parentsPrevious:
                         self.pgm.add_edge(p + str(sid-1), cname)
