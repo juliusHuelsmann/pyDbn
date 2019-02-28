@@ -7,7 +7,7 @@ from enum import Enum
 
 import __main__
 import os
-__all__ = ["NodeType", "NodeProperties", "DBN"]
+__all__ = ["NodeType", "NodeProperties", "DotsConfiguration", "DBN"]
 __version__ = "0.0.1"
 
 
@@ -22,6 +22,20 @@ class NodeType(Enum):
     Hidden = 0
     Observed = 1
     Variable = 2
+
+class DotsConfiguration(Enum):
+    """ 
+    Helper for being able to configure the dots when plotting a dynamic bayesian network graph.
+    The configurations Disabled, OnlyFirst, OnlyLast and Both are pretty much self explicatory.
+    Auto:           Plots dots AFTER the sequence in any case, and in front of the sequence
+                    iff the first entry is not the entry at time 0
+
+    """
+    Disabled = 0,
+    OnlyFirst = 1,
+    OnlyLast = 2,
+    Both = 3,
+    Auto = 4
 
 
 
@@ -137,7 +151,7 @@ class DBN:
         rc("text", usetex=True)
 
         # Borders with nothing but nothingness inside
-        border = .0
+        border = .5
         self.borderTop = border
         self.borderBottom = border
         self.borderLeft = border
@@ -152,7 +166,8 @@ class DBN:
         self.slice = {}
 
 
-    def export(self, sliceBefore=1, sliceAfter=1, nodeSpace=1, centerSuffix="\\tau", exportFile=""):
+    def export(self, sliceBefore=1, sliceAfter=1, nodeSpace=1, centerSuffix="\\tau", exportFile="", 
+               dots=DotsConfiguration.Auto):
         """
         To be called after all nodes have been added to the DBN.
 
@@ -163,6 +178,7 @@ class DBN:
         :param nodeSpace:           factor that determines the space between different nodes.
         :param centerSuffix:        the name that is written into the footer of each variable (with
                                     offset for different time slices).
+        :param dots:                see #DotsConfiguration
 
         Example usage:
         dbn.export(0,, 5, 1, "") will create the time slices 0, \dots, 5)
@@ -203,18 +219,25 @@ class DBN:
                 os.makedirs(ed)
             elif self.verbose: print("[INFO]    Subdirectory '" + ed + "' already exists!")
 
+        
 
         # compute the adequate size for the figure and initialize it.
         amountSlices = sliceBefore + sliceAfter + 1
+    
+        # increase the size of the border in case dots are to be added to the plot.
+        dotsInFrontOf = dots in [DotsConfiguration.OnlyFirst,  DotsConfiguration.Both]             \
+                        or dots == DotsConfiguration.Auto and len(centerSuffix) > 0
+        dotsBehind    = not (dots in [DotsConfiguration.OnlyFirst , DotsConfiguration.Disabled])
+
         width  = self.borderLeft + self.borderRight + ((1+self.maxx)*amountSlices) * nodeSpace
         height = self.borderBottom + self.borderTop + (1+self.maxy) * nodeSpace
         self.pgm = daft.PGM(
             shape= [
-                width,
+                width + nodeSpace/2. * (dotsInFrontOf + dotsBehind),
                 height
             ],
             origin = [
-                -self.borderLeft,
+                -self.borderLeft - (nodeSpace/2 if dotsInFrontOf else 0),
                 self.borderTop,
             ],
         )
@@ -305,6 +328,19 @@ class DBN:
                     for p in node.parentsPrevious:
                         self.pgm.add_edge(p + str(sid-1), cname)
 
+        dotsPosition = []
+        if dotsInFrontOf: dotsPosition += [-0*nodeSpace - .25]
+        if dotsBehind: dotsPosition += [(amountSlices-1) * (self.maxx+1) * nodeSpace + (self.maxx + 1.25) * nodeSpace]
+        for i, x in enumerate(dotsPosition):
+            self.pgm.add_node(
+            daft.Node(
+                name="points" + str(i),
+                content="$\dots$",
+                x=x,
+                y = height - (self.maxy / 2. + .5) * nodeSpace,
+                plot_params = { "edgecolor": (1,1,1) }
+            )
+            )
 
 
         # render and export.
