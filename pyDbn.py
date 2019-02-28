@@ -280,7 +280,9 @@ class DBN:
                 if not paintNode:
                     paintNode = node.isDisplayedInSlice(sid, sliceBefore, sliceAfter, not len(centerSuffix))
                     cname = node.name
-
+                    content = "$" + node.name + "$"
+                else:
+                    content = "$" + node.name + "_{" + centerSuffix + strnum + "}$"
 
                 if paintNode:
                     x = sid * (self.maxx+1) * nodeSpace + (node.x+.5) * nodeSpace
@@ -288,7 +290,7 @@ class DBN:
                     self.pgm.add_node(
                         daft.Node(
                             name=cname,
-                            content="$" + node.name + "_{" + centerSuffix + strnum + "}$",
+                            content=content,
                             x=x,
                             y=y,
                             observed=node.nodeType == NodeType.Observed,
