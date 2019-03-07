@@ -119,7 +119,8 @@ class DBN:
     :email:  huelsmann@campus.tu-berlin.de
     """
 
-    def __init__(self, exportDir="", verbose=True):
+    def __init__(self, exportDir="", verbose=True, borderLeft=.5, borderTop=.5, borderRight=.5,    \
+                 borderBottom=.5 ):
         """
         Sets up the default configuration (font faamily, border, etc.)
         """
@@ -151,11 +152,10 @@ class DBN:
         rc("text", usetex=True)
 
         # Borders with nothing but nothingness inside
-        border = .5
-        self.borderTop = border
-        self.borderBottom = border
-        self.borderLeft = border
-        self.borderRight = border
+        self.borderTop = borderTop
+        self.borderBottom = borderBottom
+        self.borderLeft = borderLeft
+        self.borderRight = borderRight
 
 
 
@@ -167,7 +167,7 @@ class DBN:
 
 
     def export(self, sliceBefore=1, sliceAfter=1, nodeSpace=1, centerSuffix="\\tau", exportFile="", 
-               dots=DotsConfiguration.Auto):
+               dots=DotsConfiguration.Disabled):
         """
         To be called after all nodes have been added to the DBN.
 
@@ -226,7 +226,7 @@ class DBN:
     
         # increase the size of the border in case dots are to be added to the plot.
         dotsInFrontOf = dots in [DotsConfiguration.OnlyFirst,  DotsConfiguration.Both]             \
-                        or dots == DotsConfiguration.Auto and len(centerSuffix) > 0
+                        or (dots == DotsConfiguration.Auto and len(centerSuffix) > 0)
         dotsBehind    = not (dots in [DotsConfiguration.OnlyFirst , DotsConfiguration.Disabled])
 
         width  = self.borderLeft + self.borderRight + ((1+self.maxx)*amountSlices) * nodeSpace
