@@ -260,14 +260,20 @@ class DBN:
                 else:
                     plotParams["linestyle"] = "-"
 
+                shape = "ellipse"
+                scale = 1.
 
                 if node.continuous:
                     assert(node.nodeType != NodeType.Variable)
                     #plotParams["edgecolor"] = (1,1,1,0)
-                    plotParams["linewidth"] = 1.5
+                    #plotParams["linewidth"] = 1.5
+                    plotParams["linewidth"] = .5
+                    shape = "ellipse"
                 else:
                     #plotParams["hatch"] = ""
                     plotParams["linewidth"] = .5
+                    shape = "rectangle"
+                    scale =.9
 
                 # In case the node is a variable node, only print the variable once:
                 #
@@ -287,17 +293,20 @@ class DBN:
                 if paintNode:
                     x = sid * (self.maxx+1) * nodeSpace + (node.x+.5) * nodeSpace
                     y = height - (node.y + .5) * nodeSpace
+
                     self.pgm.add_node(
-                        daft.Node(
-                            name=cname,
-                            content=content,
-                            x=x,
-                            y=y,
-                            observed=node.nodeType == NodeType.Observed,
-                            plot_params = node.plotParams,
-                            label_params = node.labelParams
+                            daft.Node(
+                                name=cname,
+                                content=content,
+                                x=x,
+                                y=y,
+                                observed=node.nodeType == NodeType.Observed,
+                                plot_params = node.plotParams,
+                                label_params = node.labelParams,
+                             shape=shape,
+                             scale=scale,
+                                ),
                         )
-                    )
 
         for sid, snum in enumerate(range(-sliceBefore, sliceAfter+1)):
             for name in self.slice:
@@ -345,6 +354,8 @@ class DBN:
             )
 
 
+
+
         # render and export.
         self.pgm.render()
         self.pgm.figure.savefig(self.exportDir + exportFile)
@@ -359,5 +370,22 @@ class DBN:
         self.slice[nodeProperties.name] = nodeProperties
         self.maxx = max(nodeProperties.x, self.maxx)
         self.maxy = max(nodeProperties.y, self.maxy)
+
+
+
+
+if __name__ == "__main__":
+    # some example dbn generation
+
+    dbn = DBN(exportDir="../tex/build/figures", borderBottom=0, borderTop=0, borderLeft=0, borderRight=0)
+    dbn.attach(NodeProperties(name="{A}", x=0.5, y=0, continuous=False, nodeType=NodeType.Observed))
+    dbn.attach(NodeProperties(name="{U_{[1:N]}}",x=1.3, y=0, continuous=True, nodeType=NodeType.Observed))
+
+    dbn.attach(NodeProperties(name="{\mu_{[1:N]}}",x=0.0, y=.5, parentsNow=["{B_{[1:N]}}"], nodeType=NodeType.Variable))
+    dbn.attach(NodeProperties(name="{\Sigma_{[1:N]}}",x=1.9, y=.5, parentsNow=["{B_{[1:N]}}"], nodeType=NodeType.Variable))
+    dbn.attach(NodeProperties(name="{B_{[1:N]}}",parentsNow=["{A}", "{U_{[1:N]}}"], x=.9, y=.8, continuous=True))
+
+    dbn.export(sliceBefore=0, sliceAfter=0, centerSuffix=" ")
+
 
 
