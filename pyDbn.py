@@ -44,7 +44,7 @@ class NodeProperties:
     Simple class that holds the properties of a node. see :__init__:.
     """
 
-    def __init__(self, name, x, y, nodeType=NodeType.Hidden, continuous=False, parentsPrevious=[], 
+    def __init__(self, name, x, y, nodeType=NodeType.Hidden, continuous=True, parentsPrevious=[], 
                  parentsNow=[], plotParams={}, labelParams=None):
         """
 
@@ -264,7 +264,7 @@ class DBN:
                 scale = 1.
 
                 if node.continuous:
-                    assert(node.nodeType != NodeType.Variable)
+                    #assert(node.nodeType != NodeType.Variable)
                     #plotParams["edgecolor"] = (1,1,1,0)
                     #plotParams["linewidth"] = 1.5
                     plotParams["linewidth"] = .5
