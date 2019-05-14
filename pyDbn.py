@@ -93,9 +93,9 @@ class NodeProperties:
 
         isOnlyFirst  = len(self.parentsPrevious)
         isEverySlice = len(self.parentsNow)
-        assert(isOnlyFirst == 0 or isEverySlice == 0)
+        #assert(isOnlyFirst == 0 or isEverySlice == 0)
         
-        if isOnlyFirst: 
+        if not isEverySlice: 
             if displayFirst:
                 return sliceIndex == 0 #< only in the first slice
             return False #< never
@@ -396,7 +396,7 @@ if __name__ == "__main__":
         dbn.attach(NodeProperties(name="A",x=0, y=0,parentsNow="X", nodeType=NodeType.Variable))
         dbn.attach(NodeProperties(name="X",x=0, y=1,parentsPrevious="X"))
         dbn.attach(NodeProperties(name="Y",x=0, y=2,parentsNow="X", nodeType=NodeType.Observed))
-        dbn.attach(NodeProperties(name="B",x=0, y=3,parentsNow="Y", nodeType=NodeType.Variable))
+        dbn.attach(NodeProperties(name="B",x=0, y=3,parentsPrevious="Y", parentsNow="Y", nodeType=NodeType.Variable))
         #dbn.export(sliceBefore=0, sliceAfter=2, centerSuffix="\\tau", dots=DotsConfiguration.OnlyFirst)
         #dbn.export(sliceBefore=0, sliceAfter=2, centerSuffix="\\tau", dots=DotsConfiguration.OnlyLast)
         dbn.export(sliceBefore=0, sliceAfter=2, centerSuffix="")
