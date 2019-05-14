@@ -44,8 +44,9 @@ class NodeProperties:
     Simple class that holds the properties of a node. see :__init__:.
     """
 
-    def __init__(self, name, x, y, nodeType=NodeType.Hidden, continuous=True, parentsPrevious=[], 
-                 parentsNow=[], plotParams={}, labelParams=None):
+    def __init__(self, name, x, y, nodeType=NodeType.Hidden, continuous=True, 
+            parents={},
+            plotParams={}, labelParams=None):
         """
 
         :param name:            the name that is going to be displayed inside the node.
@@ -62,8 +63,9 @@ class NodeProperties:
         :param continuous:      whether the random variable is discrete or continuous. 
                                 Depending on this property, the way the node is displayed changes.
 
-        :param parentsPrevious: List of parent identifiers to be linked from the previous slice
-        :param parentsNow:      List of parent identifiers from the current slice.
+        :param parents:         Map from time step t to parent identifiers. For instance
+                t = 1           List of parent identifiers to be linked from the previous slice
+                t = 0           List of parent identifiers from the current slice.
 
         :param plotParams:      Additional plot parameters can be specified in this dict.
         :param labelParams:     Labels for the legend.
@@ -75,8 +77,10 @@ class NodeProperties:
         self.nodeType = nodeType
         self.continuous = continuous
 
-        self.parentsPrevious = parentsPrevious
-        self.parentsNow = parentsNow
+        self.parents = parents
+
+        #self.parentsPrevious = parentsPrevious
+        #self.parentsNow = parentsNow
 
         self.plotParams = plotParams
         self.labelParams = labelParams
@@ -91,9 +95,12 @@ class NodeProperties:
         """
         if (self.nodeType != NodeType.Variable): return True
 
-        isOnlyFirst  = len(self.parentsPrevious)
-        isEverySlice = len(self.parentsNow)
-        #assert(isOnlyFirst == 0 or isEverySlice == 0)
+        # In case the current node is a variable, only the values for time slice 1 and 0 can to be 
+        # filled and they correspond to the following logic:
+        isOnlyFirst  = 0 if not 1 in self.parents else len(self.parents[1])
+        isEverySlice = 0 if not 0 in self.parents else len(self.parents[0])
+        for keys in self.parents:
+            assert(keys == 0 or keys == 1)
         
         if not isEverySlice: 
             if displayFirst:
@@ -313,33 +320,45 @@ class DBN:
                 node = self.slice[name]
                 cname = node.name + str(sid)
                 # add parents of the current time slice
-                for p in node.parentsNow:
+                if 0 in node.parents:
+                    for p in node.parents[0]:
 
-                    # variables can be connected across slices
-                    if node.nodeType == NodeType.Variable:
-                        if snum == sliceAfter:
-                            for sid, sn2 in enumerate(range(-sliceBefore, sliceAfter+1)):
-                                #self.pgm.add_edge(p + str(sid), node.name + str(sliceBefore), 
-                                #                  linestyle='-')
-                                
-                                if sid != 0 or len(centerSuffix):
-                                    self.pgm.add_edge(node.name, p + str(sid), linestyle='-')
-                    else:
-                        self.pgm.add_edge(p + str(sid), cname)
+                        # variables can be connected across slices
+                        if node.nodeType == NodeType.Variable:
+                            if snum == sliceAfter:
+                                for sid, sn2 in enumerate(range(-sliceBefore, sliceAfter+1)):
+                                    if sid != 0 or len(centerSuffix):
+                                        self.pgm.add_edge(node.name, p + str(sid), linestyle='-')
+                        else:
+                            self.pgm.add_edge(p + str(sid), cname)
 
-                    # in case this is not the first time slice, add links between
-                    # nodes that exert influence across time slices.
+                        # in case this is not the first time slice, add links between
+                        # nodes that exert influence across time slices.
 
                 if node.nodeType == NodeType.Variable:
-                    # if the node is a variable, the parentsPrevious are the parents
-                    # of the 0th slice if displayed.
-                    if centerSuffix=="" and sid==0:
-                        for p in node.parentsPrevious:
-                            #self.pgm.add_edge(p + '0', node.name, linestyle="-")
-                            self.pgm.add_edge(node.name, p + '0', linestyle="-")
+                    if 1 in node.parents:
+                        # if the node is a variable, the parentsPrevious are the parents
+                        # of the 0th slice if displayed.
+                        if centerSuffix=="" and sid==0:
+                            for p in node.parents[1]:
+                                #self.pgm.add_edge(p + '0', node.name, linestyle="-")
+                                self.pgm.add_edge(node.name, p + '0', linestyle="-", 
+                                        #connectionstyle="arc3,rad=-5"
+                                        )
                 elif sid:
-                    for p in node.parentsPrevious:
-                        self.pgm.add_edge(p + str(sid-1), cname)
+                    szAbnormal = len(node.parents)
+                    if 0 in node.parents: szAbnormal -= 1
+                    if 1 in node.parents: szAbnormal -= 1
+                    hasAbnormal = szAbnormal > 0 
+
+                    for i in node.parents:
+                        for p in node.parents[i]:
+                            if sid-i >= -sliceBefore:
+                                if i == 0: continue
+                                rad = 0 if not hasAbnormal else .2 if i % 2 == 0 else -.2
+                                self.pgm.add_edge(p + str(sid-i), cname,
+                                        plot_params={"connectionstyle":"arc3, rad=" + str(rad) }
+                                        )
 
         dotsPosition = []
         if dotsInFrontOf: dotsPosition += [-0*nodeSpace - .25]
@@ -386,20 +405,21 @@ if __name__ == "__main__":
         dbn.attach(NodeProperties(name="{A}", x=0.5, y=0, continuous=False, nodeType=NodeType.Observed))
         dbn.attach(NodeProperties(name="{U_{[1:N]}}",x=1.3, y=0, continuous=True, nodeType=NodeType.Observed))
 
-        dbn.attach(NodeProperties(name="{\mu_{[1:N]}}",x=0.0, y=.5, parentsNow=["{B_{[1:N]}}"], nodeType=NodeType.Variable))
-        dbn.attach(NodeProperties(name="{\Sigma_{[1:N]}}",x=1.9, y=.5, parentsNow=["{B_{[1:N]}}"], nodeType=NodeType.Variable))
-        dbn.attach(NodeProperties(name="{B_{[1:N]}}",parentsNow=["{A}", "{U_{[1:N]}}"], x=.9, y=.8, continuous=True))
+        dbn.attach(NodeProperties(name="{\mu_{[1:N]}}",x=0.0, y=.5, parents={0: ["{B_{[1:N]}}"]}, nodeType=NodeType.Variable))
+        dbn.attach(NodeProperties(name="{\Sigma_{[1:N]}}",x=1.9, y=.5, parents={0:["{B_{[1:N]}}"]}, nodeType=NodeType.Variable))
+        dbn.attach(NodeProperties(name="{B_{[1:N]}}",parents={0:["{A}", "{U_{[1:N]}}"]}, x=.9, y=.8, continuous=True))
 
         dbn.export(sliceBefore=0, sliceAfter=0, centerSuffix=" ")
     else:
-        dbn.attach(NodeProperties(name="\pi",x=0, y=0,parentsPrevious="X", nodeType=NodeType.Variable))
-        dbn.attach(NodeProperties(name="A",x=0, y=0,parentsNow="X", nodeType=NodeType.Variable))
-        dbn.attach(NodeProperties(name="X",x=0, y=1,parentsPrevious="X"))
-        dbn.attach(NodeProperties(name="Y",x=0, y=2,parentsNow="X", nodeType=NodeType.Observed))
-        dbn.attach(NodeProperties(name="B",x=0, y=3,parentsPrevious="Y", parentsNow="Y", nodeType=NodeType.Variable))
+        dbn.attach(NodeProperties(name="\pi",x=0, y=0,parents={1:["X"]}, nodeType=NodeType.Variable))
+        dbn.attach(NodeProperties(name="A",x=0, y=0,parents={0:["X"]}, nodeType=NodeType.Variable))
+        #dbn.attach(NodeProperties(name="X",x=0, y=1,parents={1:["X"]}))
+        dbn.attach(NodeProperties(name="X",x=0, y=1,parents={1:["X"], 2:"X"}))
+        dbn.attach(NodeProperties(name="Y",x=0, y=2,parents={0:"X"}, nodeType=NodeType.Observed))
+        dbn.attach(NodeProperties(name="B",x=0, y=3,parents={1:"Y", 0:"Y"}, nodeType=NodeType.Variable))
         #dbn.export(sliceBefore=0, sliceAfter=2, centerSuffix="\\tau", dots=DotsConfiguration.OnlyFirst)
         #dbn.export(sliceBefore=0, sliceAfter=2, centerSuffix="\\tau", dots=DotsConfiguration.OnlyLast)
-        dbn.export(sliceBefore=0, sliceAfter=2, centerSuffix="")
+        dbn.export(sliceBefore=0, sliceAfter=5, centerSuffix="")
 
 
 
