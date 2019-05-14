@@ -326,9 +326,9 @@ class DBN:
                         # variables can be connected across slices
                         if node.nodeType == NodeType.Variable:
                             if snum == sliceAfter:
-                                for sid, sn2 in enumerate(range(-sliceBefore, sliceAfter+1)):
-                                    if sid != 0 or len(centerSuffix):
-                                        self.pgm.add_edge(node.name, p + str(sid), linestyle='-')
+                                for sid3, sn2 in enumerate(range(sliceBefore, sliceAfter+1)):
+                                    if sid3 != 0 or len(centerSuffix):
+                                        self.pgm.add_edge(node.name, p + str(sid3), linestyle='-')
                         else:
                             self.pgm.add_edge(p + str(sid), cname)
 
@@ -352,9 +352,10 @@ class DBN:
                     hasAbnormal = szAbnormal > 0 
 
                     for i in node.parents:
+                        if i == 0: continue
                         for p in node.parents[i]:
-                            if sid-i >= -sliceBefore:
-                                if i == 0: continue
+                            if sid-i >= 0:
+                            #if sid-i >= 0:
                                 rad = 0 if not hasAbnormal else .2 if i % 2 == 0 else -.2
                                 self.pgm.add_edge(p + str(sid-i), cname,
                                         plot_params={"connectionstyle":"arc3, rad=" + str(rad) }
