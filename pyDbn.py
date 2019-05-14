@@ -321,7 +321,9 @@ class DBN:
                             for sid, sn2 in enumerate(range(-sliceBefore, sliceAfter+1)):
                                 #self.pgm.add_edge(p + str(sid), node.name + str(sliceBefore), 
                                 #                  linestyle='-')
-                                self.pgm.add_edge(node.name, p + str(sid), linestyle='-')
+                                
+                                if sid != 0 or len(centerSuffix):
+                                    self.pgm.add_edge(node.name, p + str(sid), linestyle='-')
                     else:
                         self.pgm.add_edge(p + str(sid), cname)
 
@@ -378,14 +380,29 @@ if __name__ == "__main__":
     # some example dbn generation
 
     dbn = DBN(exportDir="../tex/build/figures", borderBottom=0, borderTop=0, borderLeft=0, borderRight=0)
-    dbn.attach(NodeProperties(name="{A}", x=0.5, y=0, continuous=False, nodeType=NodeType.Observed))
-    dbn.attach(NodeProperties(name="{U_{[1:N]}}",x=1.3, y=0, continuous=True, nodeType=NodeType.Observed))
 
-    dbn.attach(NodeProperties(name="{\mu_{[1:N]}}",x=0.0, y=.5, parentsNow=["{B_{[1:N]}}"], nodeType=NodeType.Variable))
-    dbn.attach(NodeProperties(name="{\Sigma_{[1:N]}}",x=1.9, y=.5, parentsNow=["{B_{[1:N]}}"], nodeType=NodeType.Variable))
-    dbn.attach(NodeProperties(name="{B_{[1:N]}}",parentsNow=["{A}", "{U_{[1:N]}}"], x=.9, y=.8, continuous=True))
+    if False:
 
-    dbn.export(sliceBefore=0, sliceAfter=0, centerSuffix=" ")
+        dbn.attach(NodeProperties(name="{A}", x=0.5, y=0, continuous=False, nodeType=NodeType.Observed))
+        dbn.attach(NodeProperties(name="{U_{[1:N]}}",x=1.3, y=0, continuous=True, nodeType=NodeType.Observed))
+
+        dbn.attach(NodeProperties(name="{\mu_{[1:N]}}",x=0.0, y=.5, parentsNow=["{B_{[1:N]}}"], nodeType=NodeType.Variable))
+        dbn.attach(NodeProperties(name="{\Sigma_{[1:N]}}",x=1.9, y=.5, parentsNow=["{B_{[1:N]}}"], nodeType=NodeType.Variable))
+        dbn.attach(NodeProperties(name="{B_{[1:N]}}",parentsNow=["{A}", "{U_{[1:N]}}"], x=.9, y=.8, continuous=True))
+
+        dbn.export(sliceBefore=0, sliceAfter=0, centerSuffix=" ")
+    else:
+        dbn.attach(NodeProperties(name="\pi",x=0, y=0,parentsPrevious="X", nodeType=NodeType.Variable))
+        dbn.attach(NodeProperties(name="A",x=0, y=0,parentsNow="X", nodeType=NodeType.Variable))
+        dbn.attach(NodeProperties(name="X",x=0, y=1,parentsPrevious="X"))
+        dbn.attach(NodeProperties(name="Y",x=0, y=2,parentsNow="X", nodeType=NodeType.Observed))
+        dbn.attach(NodeProperties(name="B",x=0, y=3,parentsNow="Y", nodeType=NodeType.Variable))
+        #dbn.export(sliceBefore=0, sliceAfter=2, centerSuffix="\\tau", dots=DotsConfiguration.OnlyFirst)
+        #dbn.export(sliceBefore=0, sliceAfter=2, centerSuffix="\\tau", dots=DotsConfiguration.OnlyLast)
+        dbn.export(sliceBefore=0, sliceAfter=2, centerSuffix="")
+
+
+
 
 
 
