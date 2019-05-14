@@ -326,8 +326,8 @@ class DBN:
                         # variables can be connected across slices
                         if node.nodeType == NodeType.Variable:
                             if snum == sliceAfter:
-                                for sid3, sn2 in enumerate(range(sliceBefore, sliceAfter+1)):
-                                    if sid3 != 0 or len(centerSuffix):
+                                for sid3, sn2 in enumerate(range(-sliceBefore, sliceAfter+1)):
+                                    if sid3 != 0 or len(centerSuffix) != 0:
                                         self.pgm.add_edge(node.name, p + str(sid3), linestyle='-')
                         else:
                             self.pgm.add_edge(p + str(sid), cname)
