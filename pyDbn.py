@@ -381,6 +381,7 @@ class DBN:
         # render and export.
         self.pgm.render()
         self.pgm.figure.savefig(self.exportDir + exportFile)
+        print("exported to ", self.exportDir + exportFile)
 
     def attach(self, nodeProperties):
         """
