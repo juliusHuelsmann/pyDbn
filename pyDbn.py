@@ -270,6 +270,7 @@ class DBN:
                 shape = "ellipse"
                 scale = 1.
 
+                plotParams["fc"] = "lightgrey" if node.nodeType == NodeType.Observed else "white"
                 if node.continuous:
                     #assert(node.nodeType != NodeType.Variable)
                     #plotParams["edgecolor"] = (1,1,1,0)
@@ -307,7 +308,7 @@ class DBN:
                                 content=content,
                                 x=x,
                                 y=y,
-                                observed=node.nodeType == NodeType.Observed,
+                                #observed=node.nodeType == NodeType.Observed,
                                 plot_params = node.plotParams,
                                 label_params = node.labelParams,
                              shape=shape,
