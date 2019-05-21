@@ -1,6 +1,6 @@
 from matplotlib import rc
 import daft
-import math
+import math, pyperclip
 
 from enum import Enum
 
@@ -322,16 +322,33 @@ class DBN:
                 cname = node.name + str(sid)
                 # add parents of the current time slice
                 if 0 in node.parents:
-                    for p in node.parents[0]:
+                    for currentParent in node.parents[0]:
+                        isSimple = isinstance(currentParent, str) 
+                        currentParentName = currentParent if isSimple else currentParent[0]
+                        if isSimple:
+                            assert(len(currentParent) <= 2)
+                            isSimple = len(currentParent) <= 1
+                        currentParentProps = "arc3,rad=0" if isSimple else currentParent[1]
+
 
                         # variables can be connected across slices
                         if node.nodeType == NodeType.Variable:
                             if snum == sliceAfter:
                                 for sid3, sn2 in enumerate(range(-sliceBefore, sliceAfter+1)):
                                     if sid3 != 0 or len(centerSuffix) != 0:
-                                        self.pgm.add_edge(node.name, p + str(sid3), linestyle='-')
+                                        self.pgm.add_edge(node.name, currentParentName + str(sid3), 
+                                                linestyle='-',
+                                                plot_params={"connectionstyle": currentParentProps}
+                                                )
                         else:
-                            self.pgm.add_edge(p + str(sid), cname)
+                            #print(cname,  currentParentName + str(sid))
+                            if cname == currentParentName + str(sid):
+                                print("Error, self-loops are not supproted yet")
+                                assert(False)
+                                #currentParentProps="arc3,rad=0"
+                            self.pgm.add_edge(currentParentName + str(sid), cname, 
+                                    plot_params={"connectionstyle": currentParentProps}
+                                    )
 
                         # in case this is not the first time slice, add links between
                         # nodes that exert influence across time slices.
@@ -341,10 +358,17 @@ class DBN:
                         # if the node is a variable, the parentsPrevious are the parents
                         # of the 0th slice if displayed.
                         if centerSuffix=="" and sid==0:
-                            for p in node.parents[1]:
+                            for currentParent in node.parents[1]:
+                                isSimple = isinstance(currentParent, str) 
+                                currentParentName = currentParent if isSimple else currentParent[0]
+                                if isSimple:
+                                    assert(len(currentParent) <= 2)
+                                    isSimple = len(currentParent) <= 1
+                                currentParentProps = "arc3,rad=0" if isSimple else currentParent[1]
+
                                 #self.pgm.add_edge(p + '0', node.name, linestyle="-")
-                                self.pgm.add_edge(node.name, p + '0', linestyle="-", 
-                                        #connectionstyle="arc3,rad=-5"
+                                self.pgm.add_edge(node.name, currentParentName + '0', linestyle="-", 
+                                        plot_params={"connectionstyle": currentParentProps}
                                         )
                 elif sid:
                     szAbnormal = len(node.parents)
@@ -354,13 +378,26 @@ class DBN:
 
                     for i in node.parents:
                         if i == 0: continue
-                        for p in node.parents[i]:
+                        for currentParent in node.parents[i]:
+                            isSimple = isinstance(currentParent, str) 
+                            currentParentName = currentParent if isSimple else currentParent[0]
+                            if isSimple:
+                                assert(len(currentParent) <= 2)
+                                isSimple = len(currentParent) <= 1
+                            currentParentProps = "arc3,rad=0" if isSimple else currentParent[1]
+                            #XXX parameter collisions will likely lead to a fail below.
+
                             if sid-i >= 0:
-                            #if sid-i >= 0:
                                 rad = 0 if not hasAbnormal else .2 if i % 2 == 0 else -.2
-                                self.pgm.add_edge(p + str(sid-i), cname,
-                                        plot_params={"connectionstyle":"arc3, rad=" + str(rad) }
-                                        )
+                                if rad == 0:
+                                    #print(currentParentName + str(sid-i), cname,)
+                                    self.pgm.add_edge(currentParentName + str(sid-i), cname,
+                                            plot_params={"connectionstyle": currentParentProps }
+                                            )
+                                else:
+                                    self.pgm.add_edge(currentParentName + str(sid-i), cname,
+                                            plot_params={"connectionstyle":"arc3, rad=" + str(rad) }
+                                            )
 
         dotsPosition = []
         if dotsInFrontOf: dotsPosition += [-0*nodeSpace - .25]
@@ -382,7 +419,9 @@ class DBN:
         # render and export.
         self.pgm.render()
         self.pgm.figure.savefig(self.exportDir + exportFile)
-        print("exported to ", self.exportDir + exportFile)
+
+        pyperclip.copy("okular " + self.exportDir + exportFile)
+        print("okular", self.exportDir + exportFile)
 
     def attach(self, nodeProperties):
         """
@@ -401,7 +440,7 @@ class DBN:
 if __name__ == "__main__":
     # some example dbn generation
 
-    dbn = DBN(exportDir="../tex/build/figures", borderBottom=0, borderTop=0, borderLeft=0, borderRight=0)
+    dbn = DBN(exportDir="../tex/build/figures", borderBottom=0, borderTop=0.5, borderLeft=0, borderRight=0)
 
     if False:
 
@@ -414,12 +453,15 @@ if __name__ == "__main__":
 
         dbn.export(sliceBefore=0, sliceAfter=0, centerSuffix=" ")
     else:
-        dbn.attach(NodeProperties(name="\pi",x=0, y=0,parents={1:["X"]}, nodeType=NodeType.Variable))
-        dbn.attach(NodeProperties(name="A",x=0, y=0,parents={0:["X"]}, nodeType=NodeType.Variable))
+        dbn.attach(NodeProperties(name="\pi",x=0, y=-0.5,parents={1:["X"]}, nodeType=NodeType.Variable))
+        dbn.attach(NodeProperties(name="A",x=0.2, y=-0.5,parents={0:["X"]}, nodeType=NodeType.Variable))
+
+        dbn.attach(NodeProperties(name="L",x=0.0, y=0.3, parents={1:"L"}))
+
         #dbn.attach(NodeProperties(name="X",x=0, y=1,parents={1:["X"]}))
         dbn.attach(NodeProperties(name="X",x=0, y=1,parents={1:["X"], 2:"X"}))
-        dbn.attach(NodeProperties(name="Y",x=0, y=2,parents={0:"X"}, nodeType=NodeType.Observed))
-        dbn.attach(NodeProperties(name="B",x=0, y=3,parents={1:"Y", 0:"Y"}, nodeType=NodeType.Variable))
+        dbn.attach(NodeProperties(name="Y",x=0, y=2,parents={0:["X", ["L", "arc3, rad=-.7"]]}, nodeType=NodeType.Observed))
+        dbn.attach(NodeProperties(name="B",x=0, y=3,parents={1:"Y", 0:["Y"]}, nodeType=NodeType.Variable))
         #dbn.export(sliceBefore=0, sliceAfter=2, centerSuffix="\\tau", dots=DotsConfiguration.OnlyFirst)
         #dbn.export(sliceBefore=0, sliceAfter=2, centerSuffix="\\tau", dots=DotsConfiguration.OnlyLast)
         dbn.export(sliceBefore=0, sliceAfter=5, centerSuffix="")
