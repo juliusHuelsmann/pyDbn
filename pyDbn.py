@@ -46,7 +46,7 @@ class NodeProperties:
 
     def __init__(self, name, x, y, nodeType=NodeType.Hidden, continuous=True, 
             parents={},
-            plotParams={}, labelParams=None):
+            plotParams={}, labelParams=None, onlyInSlice=[]):
         """
 
         :param name:            the name that is going to be displayed inside the node.
@@ -66,10 +66,16 @@ class NodeProperties:
         :param parents:         Map from time step t to parent identifiers. For instance
                 t = 1           List of parent identifiers to be linked from the previous slice
                 t = 0           List of parent identifiers from the current slice.
+                t = -1          Link to every slice
+                t = n in N      Link to the n'th parent.
+
 
         :param plotParams:      Additional plot parameters can be specified in this dict.
         :param labelParams:     Labels for the legend.
+        :param onlyInSlice:     Contains identifiers of slices in which the node is to be displayed.
+                                If empty, it is displayed in every slice.
         """
+
         self.name = name
         self.x = x
         self.y = y
@@ -84,6 +90,8 @@ class NodeProperties:
 
         self.plotParams = plotParams
         self.labelParams = labelParams
+
+        self.onlyInSlice=onlyInSlice
     
     def isDisplayedInSlice(self, sliceIndex, sliceBefore, sliceAfter, displayFirst):
         """
@@ -97,8 +105,13 @@ class NodeProperties:
 
         # In case the current node is a variable, only the values for time slice 1 and 0 can to be 
         # filled and they correspond to the following logic:
+
+
+
         isOnlyFirst  = 0 if not 1 in self.parents else len(self.parents[1])
         isEverySlice = 0 if not 0 in self.parents else len(self.parents[0])
+        
+        # XXX: For variables self.parents \in {0,1} is to be enforced.
         for keys in self.parents:
             assert(keys == 0 or keys == 1)
         
@@ -302,30 +315,43 @@ class DBN:
                     x = sid * (self.maxx+1) * nodeSpace + (node.x+.5) * nodeSpace
                     y = height - (node.y + .5) * nodeSpace
 
-                    self.pgm.add_node(
-                            daft.Node(
-                                name=cname,
-                                content=content,
-                                x=x,
-                                y=y,
-                                #observed=node.nodeType == NodeType.Observed,
-                                plot_params = node.plotParams,
-                                label_params = node.labelParams,
-                             shape=shape,
-                             scale=scale,
-                                ),
-                        )
+                    doPaint =  len(node.onlyInSlice) == 0 or snum in node.onlyInSlice
+                    isOnlyInOneSlice = len(node.onlyInSlice) == 1
+                    if isOnlyInOneSlice: content = "$" + node.name + "$"
+
+                    if doPaint:
+
+                        self.pgm.add_node(
+                                daft.Node(
+                                    name=cname,
+                                    content=content,
+                                    x=x,
+                                    y=y,
+                                    #observed=node.nodeType == NodeType.Observed,
+                                    plot_params = node.plotParams,
+                                    label_params = node.labelParams,
+                                shape=shape,
+                                scale=scale,
+                                    ),
+                            )
 
         for sid, snum in enumerate(range(-sliceBefore, sliceAfter+1)):
             for name in self.slice:
                 node = self.slice[name]
                 cname = node.name + str(sid)
                 # add parents of the current time slice
-                if 0 in node.parents:
-                    for currentParent in node.parents[0]:
+                parentsThisSlice = (node.parents[0] if 0 in node.parents else [])
+                if isinstance(parentsThisSlice , str): parentsThisSlice = [parentsThisSlice]
+                parentsSlideGen = (node.parents[-1] if -1 in node.parents else [])
+                if isinstance(parentsSlideGen , str): parentsSlideGen = [parentsSlideGen]
+                parentsThisSlice = parentsThisSlice + parentsSlideGen
+
+
+                if len(parentsThisSlice) > 0:
+                    for currentParent in parentsThisSlice:
                         isSimple = isinstance(currentParent, str) 
                         currentParentName = currentParent if isSimple else currentParent[0]
-                        if isSimple:
+                        if not isSimple:
                             assert(len(currentParent) <= 2)
                             isSimple = len(currentParent) <= 1
                         currentParentProps = "arc3,rad=0" if isSimple else currentParent[1]
@@ -336,19 +362,25 @@ class DBN:
                             if snum == sliceAfter:
                                 for sid3, sn2 in enumerate(range(-sliceBefore, sliceAfter+1)):
                                     if sid3 != 0 or len(centerSuffix) != 0:
-                                        self.pgm.add_edge(node.name, currentParentName + str(sid3), 
-                                                linestyle='-',
-                                                plot_params={"connectionstyle": currentParentProps}
-                                                )
+                                        fullParentName = currentParentName + str(sid3)
+                                        exists =  node.name in self.pgm._nodes and fullParentName in self.pgm._nodes
+                                        if exists:
+                                            self.pgm.add_edge(node.name, fullParentName,
+                                                    linestyle='-',
+                                                    plot_params={"connectionstyle": currentParentProps}
+                                                    )
                         else:
                             #print(cname,  currentParentName + str(sid))
                             if cname == currentParentName + str(sid):
                                 print("Error, self-loops are not supproted yet")
                                 assert(False)
                                 #currentParentProps="arc3,rad=0"
-                            self.pgm.add_edge(currentParentName + str(sid), cname, 
-                                    plot_params={"connectionstyle": currentParentProps}
-                                    )
+
+                            fullParentName = currentParentName + str(sid)
+                            exists =  cname in self.pgm._nodes and fullParentName in self.pgm._nodes
+                            if exists:
+                                self.pgm.add_edge(fullParentName, cname, 
+                                        plot_params={"connectionstyle": currentParentProps})
 
                         # in case this is not the first time slice, add links between
                         # nodes that exert influence across time slices.
@@ -361,27 +393,40 @@ class DBN:
                             for currentParent in node.parents[1]:
                                 isSimple = isinstance(currentParent, str) 
                                 currentParentName = currentParent if isSimple else currentParent[0]
-                                if isSimple:
+                                if not isSimple:
                                     assert(len(currentParent) <= 2)
                                     isSimple = len(currentParent) <= 1
                                 currentParentProps = "arc3,rad=0" if isSimple else currentParent[1]
 
                                 #self.pgm.add_edge(p + '0', node.name, linestyle="-")
-                                self.pgm.add_edge(node.name, currentParentName + '0', linestyle="-", 
-                                        plot_params={"connectionstyle": currentParentProps}
-                                        )
+                                fullParentName = currentParentName + '0'
+                                exists =  node.name in self.pgm._nodes and fullParentName in self.pgm._nodes
+                                if exists:
+                                    self.pgm.add_edge(node.name,  fullParentName, linestyle="-", 
+                                            plot_params={"connectionstyle": currentParentProps})
                 elif sid:
                     szAbnormal = len(node.parents)
                     if 0 in node.parents: szAbnormal -= 1
                     if 1 in node.parents: szAbnormal -= 1
+                    if -1 in node.parents: szAbnormal -= 1
                     hasAbnormal = szAbnormal > 0 
 
-                    for i in node.parents:
+                    #for i in node.parents:
+                    #    if i == 0: continue
+                    for sid_edge, snum_edge in enumerate(range(-sliceBefore, sliceAfter+1)):
+                        
+                        i = sid - sid_edge
+                        parentsSlideSnum = (node.parents[i] if i in node.parents else [])
+                        if isinstance(parentsSlideSnum , str): parentsSlideSnum = [parentsSlideSnum]
+                        parentsSlideGen = (node.parents[-1] if -1 in node.parents else [])
+                        if isinstance(parentsSlideGen , str): parentsSlideGen = [parentsSlideGen]
+                        parentsSlideSnum = parentsSlideSnum + parentsSlideGen
+
                         if i == 0: continue
-                        for currentParent in node.parents[i]:
+                        for currentParent in parentsSlideSnum:
                             isSimple = isinstance(currentParent, str) 
                             currentParentName = currentParent if isSimple else currentParent[0]
-                            if isSimple:
+                            if not isSimple:
                                 assert(len(currentParent) <= 2)
                                 isSimple = len(currentParent) <= 1
                             currentParentProps = "arc3,rad=0" if isSimple else currentParent[1]
@@ -389,15 +434,17 @@ class DBN:
 
                             if sid-i >= 0:
                                 rad = 0 if not hasAbnormal else .2 if i % 2 == 0 else -.2
-                                if rad == 0:
-                                    #print(currentParentName + str(sid-i), cname,)
-                                    self.pgm.add_edge(currentParentName + str(sid-i), cname,
-                                            plot_params={"connectionstyle": currentParentProps }
-                                            )
-                                else:
-                                    self.pgm.add_edge(currentParentName + str(sid-i), cname,
-                                            plot_params={"connectionstyle":"arc3, rad=" + str(rad) }
-                                            )
+                                fullParentName = currentParentName + str(sid-i)
+                                exists =  cname in self.pgm._nodes and fullParentName in self.pgm._nodes
+                                if exists:
+                                    if rad == 0:
+                                        self.pgm.add_edge(currentParentName + str(sid-i), cname,
+                                                plot_params={"connectionstyle": currentParentProps }
+                                                )
+                                    else:
+                                        self.pgm.add_edge(currentParentName + str(sid-i), cname,
+                                                plot_params={"connectionstyle":"arc3, rad=" + str(rad) }
+                                                )
 
         dotsPosition = []
         if dotsInFrontOf: dotsPosition += [-0*nodeSpace - .25]
@@ -456,7 +503,8 @@ if __name__ == "__main__":
         dbn.attach(NodeProperties(name="\pi",x=0, y=-0.5,parents={1:["X"]}, nodeType=NodeType.Variable))
         dbn.attach(NodeProperties(name="A",x=0.2, y=-0.5,parents={0:["X"]}, nodeType=NodeType.Variable))
 
-        dbn.attach(NodeProperties(name="L",x=0.0, y=0.3, parents={1:"L"}))
+        dbn.attach(NodeProperties(name="G",x=0.0, y=-0.5, onlyInSlice=[2]))
+        dbn.attach(NodeProperties(name="L",x=0.0, y=0.3, parents={1:"L", -1:[["G"]]}))
 
         #dbn.attach(NodeProperties(name="X",x=0, y=1,parents={1:["X"]}))
         dbn.attach(NodeProperties(name="X",x=0, y=1,parents={1:["X"], 2:"X"}))
