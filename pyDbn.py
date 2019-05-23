@@ -337,8 +337,10 @@ class DBN:
 
         for sid, snum in enumerate(range(-sliceBefore, sliceAfter+1)):
             for name in self.slice:
+
                 node = self.slice[name]
                 cname = node.name + str(sid)
+
                 # add parents of the current time slice
                 parentsThisSlice = (node.parents[0] if 0 in node.parents else [])
                 if isinstance(parentsThisSlice , str): parentsThisSlice = [parentsThisSlice]
@@ -347,49 +349,28 @@ class DBN:
                 parentsThisSlice = parentsThisSlice + parentsSlideGen
 
 
-                if len(parentsThisSlice) > 0:
-                    for currentParent in parentsThisSlice:
-                        isSimple = isinstance(currentParent, str) 
-                        currentParentName = currentParent if isSimple else currentParent[0]
-                        if not isSimple:
-                            assert(len(currentParent) <= 2)
-                            isSimple = len(currentParent) <= 1
-                        currentParentProps = "arc3,rad=0" if isSimple else currentParent[1]
-
-
-                        # variables can be connected across slices
-                        if node.nodeType == NodeType.Variable:
-                            if snum == sliceAfter:
-                                for sid3, sn2 in enumerate(range(-sliceBefore, sliceAfter+1)):
-                                    if sid3 != 0 or len(centerSuffix) != 0:
-                                        fullParentName = currentParentName + str(sid3)
-                                        exists =  node.name in self.pgm._nodes and fullParentName in self.pgm._nodes
-                                        if exists:
-                                            self.pgm.add_edge(node.name, fullParentName,
-                                                    linestyle='-',
-                                                    plot_params={"connectionstyle": currentParentProps}
-                                                    )
-                        else:
-                            #print(cname,  currentParentName + str(sid))
-                            if cname == currentParentName + str(sid):
-                                print("Error, self-loops are not supproted yet")
-                                assert(False)
-                                #currentParentProps="arc3,rad=0"
-
-                            fullParentName = currentParentName + str(sid)
-                            exists =  cname in self.pgm._nodes and fullParentName in self.pgm._nodes
-                            if exists:
-                                self.pgm.add_edge(fullParentName, cname, 
-                                        plot_params={"connectionstyle": currentParentProps})
-
-                        # in case this is not the first time slice, add links between
-                        # nodes that exert influence across time slices.
 
                 if node.nodeType == NodeType.Variable:
-                    if 1 in node.parents:
-                        # if the node is a variable, the parentsPrevious are the parents
-                        # of the 0th slice if displayed.
-                        if centerSuffix=="" and sid==0:
+                    # Paint connections to the one node that is created for X_\tau
+                    if snum == sliceAfter:
+
+                        for sid3, sn2 in enumerate(range(-sliceBefore, sliceAfter+1)):
+                            if sid3 != 0 or len(centerSuffix) != 0:
+                                for currentParent in parentsThisSlice:
+                                    isSimple = isinstance(currentParent, str) 
+                                    currentParentName = currentParent if isSimple else currentParent[0]
+                                    fullParentName = currentParentName + str(sid3)
+                                    exists =  node.name in self.pgm._nodes and fullParentName in self.pgm._nodes
+                                    if exists:
+                                        currentParentProps = "arc3,rad=0" if isSimple else currentParent[1]
+                                        self.pgm.add_edge(node.name, fullParentName,
+                                                linestyle='-',
+                                                plot_params={"connectionstyle": currentParentProps})
+
+                    # if the node is a variable, the parentsPrevious are the parents
+                    # of the 0th slice if displayed.
+                    if sid == 0 and len(centerSuffix) == 0:
+                        if 1 in node.parents:
                             for currentParent in node.parents[1]:
                                 isSimple = isinstance(currentParent, str) 
                                 currentParentName = currentParent if isSimple else currentParent[0]
@@ -404,7 +385,36 @@ class DBN:
                                 if exists:
                                     self.pgm.add_edge(node.name,  fullParentName, linestyle="-", 
                                             plot_params={"connectionstyle": currentParentProps})
-                elif sid:
+
+                else:
+
+
+                    # interconnection this slice (parents at 0)
+                    for currentParent in parentsThisSlice:
+                        isSimple = isinstance(currentParent, str) 
+                        currentParentName = currentParent if isSimple else currentParent[0]
+                        if not isSimple:
+                            assert(len(currentParent) <= 2)
+                            isSimple = len(currentParent) <= 1
+                        currentParentProps = "arc3,rad=0" if isSimple else currentParent[1]
+
+                        #print(cname,  currentParentName + str(sid))
+                        if cname == currentParentName + str(sid):
+                            print("Error, self-loops are not supproted yet")
+                            assert(False)
+                            #currentParentProps="arc3,rad=0"
+
+                        fullParentName = currentParentName + str(sid)
+                        exists =  cname in self.pgm._nodes and fullParentName in self.pgm._nodes
+                        if exists:
+                            self.pgm.add_edge(fullParentName, cname, 
+                                    plot_params={"connectionstyle": currentParentProps})
+
+                    # in case this is not the first time slice, add links between
+                    # nodes that exert influence across time slices.
+
+                    # interconnection other slices (parents at i != 0)
+                    #if sid:
                     szAbnormal = len(node.parents)
                     if 0 in node.parents: szAbnormal -= 1
                     if 1 in node.parents: szAbnormal -= 1
@@ -418,8 +428,6 @@ class DBN:
                         i = sid - sid_edge
                         parentsSlideSnum = (node.parents[i] if i in node.parents else [])
                         if isinstance(parentsSlideSnum , str): parentsSlideSnum = [parentsSlideSnum]
-                        parentsSlideGen = (node.parents[-1] if -1 in node.parents else [])
-                        if isinstance(parentsSlideGen , str): parentsSlideGen = [parentsSlideGen]
                         parentsSlideSnum = parentsSlideSnum + parentsSlideGen
 
                         if i == 0: continue
@@ -432,19 +440,19 @@ class DBN:
                             currentParentProps = "arc3,rad=0" if isSimple else currentParent[1]
                             #XXX parameter collisions will likely lead to a fail below.
 
-                            if sid-i >= 0:
-                                rad = 0 if not hasAbnormal else .2 if i % 2 == 0 else -.2
-                                fullParentName = currentParentName + str(sid-i)
-                                exists =  cname in self.pgm._nodes and fullParentName in self.pgm._nodes
-                                if exists:
-                                    if rad == 0:
-                                        self.pgm.add_edge(currentParentName + str(sid-i), cname,
-                                                plot_params={"connectionstyle": currentParentProps }
-                                                )
-                                    else:
-                                        self.pgm.add_edge(currentParentName + str(sid-i), cname,
-                                                plot_params={"connectionstyle":"arc3, rad=" + str(rad) }
-                                                )
+                            #if sid-i >= 0 or True:
+                            rad = 0 if not hasAbnormal else .2 if i % 2 == 0 else -.2
+                            fullParentName = currentParentName + str(sid_edge)
+                            exists =  cname in self.pgm._nodes and fullParentName in self.pgm._nodes
+                            if exists:
+                                if rad == 0:
+                                    self.pgm.add_edge(fullParentName, cname,
+                                            plot_params={"connectionstyle": currentParentProps }
+                                            )
+                                else:
+                                    self.pgm.add_edge(fullParentName, cname,
+                                            plot_params={"connectionstyle":"arc3, rad=" + str(rad) }
+                                            )
 
         dotsPosition = []
         if dotsInFrontOf: dotsPosition += [-0*nodeSpace - .25]
