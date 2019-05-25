@@ -47,6 +47,7 @@ class NodeProperties:
     def __init__(self, name, x, y, nodeType=NodeType.Hidden, continuous=True, 
             parents={},
             plotParams={}, labelParams=None, onlyInSlice=[]):
+
         """
 
         :param name:            the name that is going to be displayed inside the node.
@@ -92,7 +93,7 @@ class NodeProperties:
         self.labelParams = labelParams
 
         self.onlyInSlice=onlyInSlice
-    
+        
     def isDisplayedInSlice(self, sliceIndex, sliceBefore, sliceAfter, displayFirst):
         """
         Utility function for checking if a node is displayed in the current slice (identified by
@@ -273,7 +274,7 @@ class DBN:
                 else:
                     strnum = str(snum)
 
-                plotParams = node.plotParams
+                plotParams = node.plotParams.copy()
 
                 if node.nodeType == NodeType.Variable:
                     plotParams["linestyle"] = ":"
@@ -283,7 +284,9 @@ class DBN:
                 shape = "ellipse"
                 scale = 1.
 
-                plotParams["fc"] = "lightgrey" if node.nodeType == NodeType.Observed else "white"
+                if not ("fc" in plotParams): 
+                    plotParams["fc"] = "lightgray" if node.nodeType == NodeType.Observed else "white" 
+
                 if node.continuous:
                     #assert(node.nodeType != NodeType.Variable)
                     #plotParams["edgecolor"] = (1,1,1,0)
@@ -328,7 +331,7 @@ class DBN:
                                     x=x,
                                     y=y,
                                     #observed=node.nodeType == NodeType.Observed,
-                                    plot_params = node.plotParams,
+                                    plot_params = plotParams,
                                     label_params = node.labelParams,
                                 shape=shape,
                                 scale=scale,
