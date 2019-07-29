@@ -188,7 +188,7 @@ class DBN:
 
 
     def export(self, sliceBefore=1, sliceAfter=1, nodeSpace=1, centerSuffix="\\tau", exportFile="", 
-               dots=DotsConfiguration.Disabled):
+               dots=DotsConfiguration.Disabled, scaleFactor=1):
         """
         To be called after all nodes have been added to the DBN.
 
@@ -298,6 +298,7 @@ class DBN:
                     plotParams["linewidth"] = .5
                     shape = "rectangle"
                     scale =.9
+                scale *= scaleFactor
 
                 # In case the node is a variable node, only print the variable once:
                 #
